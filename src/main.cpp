@@ -57,7 +57,6 @@ void func(int id, int count, sf::Uint8* pixels) {
 			pixels[(pixel_y * WINDOW_X + pixel_x) * 4 + 1] = (val >> 8) & 0xff;
 			pixels[(pixel_y * WINDOW_X + pixel_x) * 4 + 2] = (val >> 16) & 0xff;
 			pixels[(pixel_y * WINDOW_X + pixel_x) * 4 + 3] = 200;
-			//memcpy(&pixels[(pixel_y * pixel_x + pixel_y) * 4], (void*)&c, sizeof(c));
 		}
 	}
 }
