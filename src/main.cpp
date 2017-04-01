@@ -6,6 +6,7 @@
 #include "util.hpp"
 #include <thread>
 #include <vector>
+#include "OpenCL.h"
 
 float elap_time() {
 	static std::chrono::time_point<std::chrono::system_clock> start;
@@ -43,15 +44,15 @@ void func(int id, int count, sf::Uint8* pixels) {
 			int iteration_count = 0;
 			int interation_threshold = 1000;
 
-			while (pow(x, 2) + pow(y, 2) < pow(2, 2) && iteration_count < interation_threshold) {
-				float x_temp = pow(x, 2) - pow(y, 2) + x0;
+			while (x*x + y*y < 4 && iteration_count < interation_threshold) {
+				float x_temp = x*x - y*y + x0;
 				y = 2 * x * y + y0;
 				x = x_temp;
 				iteration_count++;
 			}
 
 			sf::Color c(0, 0, scale(iteration_count, 0, 1000, 0, 255), 255);
-			int val = scale(iteration_count, 0, 1000, 0, pow(2, 24));
+			int val = scale(iteration_count, 0, 1000, 0, 16777216);
 
 			pixels[(pixel_y * WINDOW_X + pixel_x) * 4 + 0] = val & 0xff;
 			pixels[(pixel_y * WINDOW_X + pixel_x) * 4 + 1] = (val >> 8) & 0xff;
@@ -61,6 +62,8 @@ void func(int id, int count, sf::Uint8* pixels) {
 	}
 }
 
+enum Mouse_State {PRESSED, DEPRESSED};
+
 int main() {
 	
 	std::mt19937 rng(time(NULL));
@@ -69,13 +72,19 @@ int main() {
 	sf::RenderWindow window(sf::VideoMode(WINDOW_X, WINDOW_Y), "quick-sfml-template");
 	window.setFramerateLimit(60);
 
-
 	float physic_step = 0.166f;
 	float physic_time = 0.0f;
 
 	double frame_time = 0.0, elapsed_time = 0.0, delta_time = 0.0, accumulator_time = 0.0, current_time = 0.0;
 	fps_counter fps;
 	
+	OpenCL cl(sf::Vector2i(WINDOW_X, WINDOW_Y));
+	cl.init();
+
+
+
+
+
 	sf::Uint8 *pixels = new sf::Uint8[WINDOW_X * WINDOW_Y * 4];
 
 	sf::Sprite viewport_sprite;

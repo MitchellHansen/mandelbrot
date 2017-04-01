@@ -97,32 +97,6 @@ private:
 	int vertex_position = 0;
 };
 
-struct debug_text {
-public:
-	debug_text(int slot, int pixel_spacing, void* data_, std::string prefix_) : data(data_), prefix(prefix_) {
-		if (!f.loadFromFile("../assets/fonts/Arial.ttf")) {
-			std::cout << "couldn't find the fall back Arial font in ../assets/fonts/" << std::endl;
-		}
-		else {
-			t.setFont(f);
-			t.setCharacterSize(20);
-			t.setPosition(static_cast<float>(20), static_cast<float>(slot * pixel_spacing));
-		}
-
-	}
-
-	void draw(sf::RenderWindow *r) {
-		t.setString(prefix + std::to_string(*(float*)data));
-		r->draw(t);
-	}
-
-private:
-	void* data;
-	std::string prefix;
-	sf::Font f;
-	sf::Text t;
-
-};
 
 inline sf::Vector3f SphereToCart(sf::Vector2f i) {
 
@@ -169,7 +143,6 @@ inline sf::Vector3f FixOrigin(sf::Vector3f base, sf::Vector3f head) {
 	return head - base;
 }
 
-
 inline sf::Vector3f Normalize(sf::Vector3f in) {
 
 	float multiplier = sqrt(in.x * in.x + in.y * in.y + in.z * in.z);
@@ -181,7 +154,6 @@ inline sf::Vector3f Normalize(sf::Vector3f in) {
 	return r;
 
 }
-
 
 inline float DotProduct(sf::Vector3f a, sf::Vector3f b){
 	return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -249,61 +221,6 @@ inline void DumpLog(std::stringstream* ss, std::string file_name) {
 	log_file << ss->str();
 
 	log_file.close();
-
-}
-
-inline std::string sfml_get_input(sf::RenderWindow *window) {
-
-	std::stringstream ss;
-
-	sf::Event event;
-	while (window->pollEvent(event)) {
-		if (event.type == sf::Event::TextEntered) {
-			ss << event.text.unicode;
-		}
-
-		else if (event.type == sf::Event::KeyPressed) {
-			if (event.key.code == sf::Keyboard::Return) {
-				return ss.str();
-			}
-		}
-	}
-}
-
-inline std::vector<float> sfml_get_float_input(sf::RenderWindow *window) {
-
-	std::stringstream ss;
-
-	sf::Event event;
-	while (true) {
-
-		if (window->pollEvent(event)) {
-
-			if (event.type == sf::Event::TextEntered) {
-				if (event.text.unicode > 47 && event.text.unicode < 58 || event.text.unicode == 32)
-					ss << static_cast<char>(event.text.unicode);
-			}
-
-			else if (event.type == sf::Event::KeyPressed) {
-
-				if (event.key.code == sf::Keyboard::Return) {
-					break;
-				}
-			}
-		}
-	}
-
-	std::istream_iterator<std::string> begin(ss);
-	std::istream_iterator<std::string> end;
-	std::vector<std::string> vstrings(begin, end);
-
-	std::vector<float> ret;
-
-	for (auto i: vstrings) {
-		ret.push_back(std::stof(i));
-	}
-
-	return ret;
 
 }
 
