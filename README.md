@@ -1,4 +1,4 @@
 
 # Screenshots
 
-![alt tag](https://github.com/MitchellHansen/mandlebrot/assets/screenshot.png)
+![alt tag](https://github.com/MitchellHansen/mandlebrot/blob/master/assets/screenshot.PNG)
