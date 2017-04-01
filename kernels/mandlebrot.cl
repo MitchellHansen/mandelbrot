@@ -21,7 +21,7 @@ __kernel void mandlebrot (
   float y = 0.0;
 
   int iteration_count = 0;
-  int interation_threshold = 1000;
+  int interation_threshold = 2000;
 
   while (x*x + y*y < 4 && iteration_count < interation_threshold) {
     float x_temp = x*x - y*y + x0;
@@ -31,8 +31,15 @@ __kernel void mandlebrot (
   }
 
   int val = scale(iteration_count, 0, 1000, 0, 16777216);
+  //printf("%i", ((val >> 8) & 0xff));
 
-  write_imagef(image, pixel, (float4)(val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff, 200));
+  float r = scale((val & 0xff), 0, 255, 0, 1);
+  float g = scale((val >> 8) & 0xff, 0, 255, 0, 1);
+  float b = scale((val >> 16) & 0xff, 0, 255, 0, 1);
+
+
+//  write_imagei(image, pixel, (int4)((val & 0xff), ((val >> 8) & 0xff), ((val >> 16) & 0xff), 200));
+    write_imagef(image, pixel, (float4)(r, g, b, 200));
 
   return;
 

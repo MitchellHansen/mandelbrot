@@ -23,6 +23,7 @@
 #include <SFML/Graphics.hpp>
 #include <unordered_map>
 #include <iostream>
+#include "Vector4.hpp"
 
 struct device {
 	
@@ -47,7 +48,7 @@ public:
 	OpenCL(sf::Vector2i resolution);
 	~OpenCL();
 
-	bool init();
+	bool init(sf::Vector4f *range);
 
 	void run_kernel(std::string kernel_name);
 
@@ -95,8 +96,10 @@ private:
 	// Create a buffer with CL_MEM_READ_ONLY and CL_MEM_COPY_HOST_PTR
 	int create_buffer(std::string buffer_name, cl_uint size, void* data);
 
+
 	// Create a buffer with user defined data access flags
 	int create_buffer(std::string buffer_name, cl_uint size, void* data, cl_mem_flags flags);
+
 
 	// Store a cl_mem object in the buffer map <string:name, cl_mem:buffer>
 	int store_buffer(cl_mem buffer, std::string buffer_name);

@@ -79,32 +79,10 @@ int main() {
 	fps_counter fps;
 	
 	OpenCL cl(sf::Vector2i(WINDOW_X, WINDOW_Y));
-	cl.init();
 
+	sf::Vector4f range(-1.0f, 1.0f, -1.0f, 1.0f);
+	cl.init(&range);
 
-
-
-
-	sf::Uint8 *pixels = new sf::Uint8[WINDOW_X * WINDOW_Y * 4];
-
-	sf::Sprite viewport_sprite;
-	sf::Texture viewport_texture;
-	viewport_texture.create(WINDOW_X, WINDOW_Y);
-	viewport_texture.update(pixels);
-	viewport_sprite.setTexture(viewport_texture);
-
-
-	std::vector<std::thread> thread_pool;
-
-	for (int i = 0; i < 10; i++) {
-		thread_pool.emplace_back(std::thread(func, i, 10, pixels));
-	}
-
-	for (auto &t: thread_pool) {
-		t.join();
-	}
-
-	viewport_texture.update(pixels);
 
 	while (window.isOpen())
 	{
@@ -112,6 +90,36 @@ int main() {
 		while (window.pollEvent(event)) {
 			if (event.type == sf::Event::Closed) {
 				window.close();
+			}
+			if (event.type == sf::Event::KeyPressed) {
+				if (event.key.code == sf::Keyboard::Down) {
+					range.z += 0.001;
+					range.w += 0.001;
+				}
+				if (event.key.code == sf::Keyboard::Up) {
+					range.z -= 0.001;
+					range.w -= 0.001;
+				}
+				if (event.key.code == sf::Keyboard::Right) {
+					range.x += 0.001;
+					range.y += 0.001;
+				}
+				if (event.key.code == sf::Keyboard::Left) {
+					range.x -= 0.001;
+					range.y -= 0.001;
+				}
+				if (event.key.code == sf::Keyboard::Equal) {
+					range.x *= 1.02;
+					range.y *= 1.02;
+					range.z *= 1.02;
+					range.w *= 1.02;
+				}
+				if (event.key.code == sf::Keyboard::Dash) {
+					range.x *= 0.98;
+					range.y *= 0.98;
+					range.z *= 0.98;
+					range.w *= 0.98;
+				}
 			}
 		}
 
@@ -130,9 +138,13 @@ int main() {
 			// Do physics at 60fps
 		}
 
+		cl.run_kernel("mandlebrot");
+
 		window.clear(sf::Color::White);
 
-		window.draw(viewport_sprite);
+		cl.draw(&window);
+
+		//window.draw(viewport_sprite);
 
 		fps.draw(&window);
 		fps.frame(delta_time);

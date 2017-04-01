@@ -442,7 +442,8 @@ OpenCL::~OpenCL() {
 
 }
 
-bool OpenCL::init() {
+bool OpenCL::init(sf::Vector4f *range)
+{
 	
 	// Initialize opencl up to the point where we start assigning buffers
 	aquire_hardware();
@@ -457,9 +458,8 @@ bool OpenCL::init() {
 	
 	create_image_buffer("viewport_image", viewport_texture.getSize().x * viewport_texture.getSize().x * 4 * sizeof(float), &viewport_texture, CL_MEM_WRITE_ONLY);
 	create_buffer("image_res", sizeof(sf::Vector2i), &viewport_resolution);
+	create_buffer("range", sizeof(sf::Vector4f), range, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR);
 
-	sf::Vector4i range(-1.0f, 1.0f, -1.0f, 1.0f);
-	create_buffer("range", sizeof(sf::Vector4i), &range);
 
 	set_kernel_arg("mandlebrot", 0, "image_res");
 	set_kernel_arg("mandlebrot", 1, "viewport_image");
