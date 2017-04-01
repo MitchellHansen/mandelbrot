@@ -5,7 +5,6 @@
 #include <chrono>
 #include "util.hpp"
 #include <thread>
-#include <vector>
 #include "OpenCL.h"
 
 float elap_time() {

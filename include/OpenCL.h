@@ -1,8 +1,16 @@
 #pragma once
 
+#include <string>
+#include <SFML/Graphics.hpp>
+#include <unordered_map>
+#include <iostream>
+#include "Vector4.hpp"
+#include <string.h>
+
 #ifdef linux
 #include <CL/cl.h>
 #include <CL/opencl.h>
+#include <GL/glx.h>
 
 #elif defined _WIN32
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -18,13 +26,6 @@
 #include <OpenCL/opencl.h>
 
 #endif
-
-#include <string>
-#include <SFML/Graphics.hpp>
-#include <unordered_map>
-#include <iostream>
-#include "Vector4.hpp"
-
 struct device {
 	
 	cl_device_id id;
