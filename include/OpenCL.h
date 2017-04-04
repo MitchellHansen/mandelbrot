@@ -28,44 +28,6 @@
 #endif
 
 
-class device {
-	
-public:
-
-	struct packed_data {
-
-		cl_device_type type;
-		cl_uint clock_frequency;
-		char version[64];
-		cl_uint comp_units;
-		char extensions[1024];
-		char name[128];
-
-	};
-
-	device(cl_device_id device_id, cl_platform_id platform_id);
-	
-private:
-	cl_device_id id;
-	cl_device_type type;
-	cl_uint clock_frequency;
-	char version[128];
-	cl_platform_id platform;
-	cl_uint comp_units;
-	char extensions[1024];
-	char name[256];
-	cl_bool is_little_endian = false;
-	bool cl_gl_sharing = false;
-	char platform_name[128];
-
-};
-
-
-const struct saved_device {
-	
-	
-};
-
 class OpenCL {
 	
 public:
@@ -84,7 +46,6 @@ public:
 	// - Contexts cannot be created using more than one platform!
 
 
-	bool load_config();
 
 	bool init(sf::Vector4f *range);
 
@@ -92,9 +53,50 @@ public:
 
 	void draw(sf::RenderWindow *window);
 
-	
+
+	class device {
+
+	public:
+
+		#pragma pack(push, 1)
+		struct packed_data {
+
+			cl_device_type device_type;
+			cl_uint clock_frequency;
+			char opencl_version[64];
+			cl_uint compute_units;
+			char device_extensions[1024];
+			char device_name[256];
+			char platform_name[128];
+		};
+		#pragma pack(pop)
+		
+		device(cl_device_id device_id, cl_platform_id platform_id);
+		void print(std::ostream& stream);
+		void print_packed_data(std::ostream& stream);
+
+		cl_device_id getDeviceId() const { return device_id; };
+		cl_platform_id getPlatformId() const { return platform_id; };
+
+	private:
+
+		packed_data data;
+
+		cl_device_id device_id;
+		cl_platform_id platform_id;
+
+		cl_bool is_little_endian = false;
+		bool cl_gl_sharing = false;
+
+	};
 
 private:
+
+	bool load_config();
+	void save_config();
+
+	std::vector<device> device_list;
+
 
 	std::vector<std::pair<cl_platform_id, std::vector<cl_device_id>>> platforms_and_devices;
 
@@ -153,6 +155,6 @@ private:
 	void assign_kernel_args();
 	int set_kernel_arg(std::string kernel_name, int index, std::string buffer_name);
 
-	bool vr_assert(int error_code, std::string function_name);
+	static bool vr_assert(int error_code, std::string function_name);
 
 };
