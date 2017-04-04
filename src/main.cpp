@@ -47,7 +47,7 @@ int main() {
 		std::cin.get();
 	}
 
-	cl.create_image_buffer("viewport_image", image_resolution, sf::Vector2f(100, 100), CL_MEM_WRITE_ONLY);
+	cl.create_image_buffer("viewport_image", image_resolution, sf::Vector2f(0, 0), CL_MEM_WRITE_ONLY);
 	cl.create_buffer("image_res", sizeof(sf::Vector2i), &image_resolution);
 	cl.create_buffer("range", sizeof(sf::Vector4f), (void*)&range, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR);
 	
