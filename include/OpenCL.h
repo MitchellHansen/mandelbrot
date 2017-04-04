@@ -26,8 +26,26 @@
 #include <OpenCL/opencl.h>
 
 #endif
-struct device {
+
+
+class device {
 	
+public:
+
+	struct packed_data {
+
+		cl_device_type type;
+		cl_uint clock_frequency;
+		char version[64];
+		cl_uint comp_units;
+		char extensions[1024];
+		char name[128];
+
+	};
+
+	device(cl_device_id device_id, cl_platform_id platform_id);
+	
+private:
 	cl_device_id id;
 	cl_device_type type;
 	cl_uint clock_frequency;
@@ -38,9 +56,15 @@ struct device {
 	char name[256];
 	cl_bool is_little_endian = false;
 	bool cl_gl_sharing = false;
+	char platform_name[128];
 
 };
 
+
+const struct saved_device {
+	
+	
+};
 
 class OpenCL {
 	
@@ -49,13 +73,31 @@ public:
 	OpenCL(sf::Vector2i resolution);
 	~OpenCL();
 
+	// command queues are associated with a device and context, so for multi-gpu applications you would need
+	// multiple command queues 
+	
+	
+	// CONTEXTS
+	// - An OpenCL context is created with one or more devices. Contexts are used by the OpenCL runtime 
+	// for managing objects such as command - queues, memory, program and kernel objects and for executing 
+	// kernels on one or more devices specified in the context.
+	// - Contexts cannot be created using more than one platform!
+
+
+	bool load_config();
+
 	bool init(sf::Vector4f *range);
 
 	void run_kernel(std::string kernel_name);
 
 	void draw(sf::RenderWindow *window);
 
+	
+
 private:
+
+	std::vector<std::pair<cl_platform_id, std::vector<cl_device_id>>> platforms_and_devices;
+
 
 	int error = 0;
 

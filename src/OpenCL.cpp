@@ -36,24 +36,29 @@ void OpenCL::draw(sf::RenderWindow *window) {
 }
 
 void OpenCL::aquire_hardware() {
+
 	// Get the number of platforms
 	cl_uint plt_cnt = 0;
 	clGetPlatformIDs(0, nullptr, &plt_cnt);
 
-	// Fetch the platforms
-	std::map<cl_platform_id, std::vector<device>> plt_ids;
-
-	// buffer before map init
+	// Get the ID's for those platforms
 	std::vector<cl_platform_id> plt_buf(plt_cnt);
 	clGetPlatformIDs(plt_cnt, plt_buf.data(), nullptr);
 
-	// Map init
+	// Populate the storage vector with the platform id's
 	for (auto id : plt_buf) {
-		plt_ids.emplace(std::make_pair(id, std::vector<device>()));
+		platforms_and_devices.push_back(std::make_pair(id, std::vector<cl_device_id>()));
 	}
 
+	for (std::pair<cl_platform_id, std::vector<cl_device_id>)
 	// For each platform, populate its devices
 	for (unsigned int i = 0; i < plt_cnt; i++) {
+
+
+		char plt_name[128];
+		clGetPlatformInfo(plt_buf[i], CL_PLATFORM_NAME, 128, (void*)&plt_name, nullptr);
+		std::cout << "Platform name " << plt_name << std::endl;
+
 
 		cl_uint deviceIdCount = 0;
 		error = clGetDeviceIDs(plt_buf[i], CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceIdCount);
@@ -86,8 +91,13 @@ void OpenCL::aquire_hardware() {
 			clGetDeviceInfo(d.id, CL_DEVICE_NAME, 256, &d.name, NULL);
 			clGetDeviceInfo(d.id, CL_DEVICE_ENDIAN_LITTLE, sizeof(cl_bool), &d.is_little_endian, NULL);
 
+
 			std::cout << "Device: " << q << std::endl;
+			std::cout << "Device ID : " << d.id << std::endl;
 			std::cout << "Device Name : " << d.name << std::endl;
+
+			memcpy(d.platform_name, plt_name, 128);
+			std::cout << "Platform name : " << d.platform_name << std::endl;
 
 			std::cout << "Platform ID    : " << d.platform << std::endl;
 			std::cout << "Device Version : " << d.version << std::endl;
@@ -226,15 +236,27 @@ void OpenCL::create_shared_context() {
 	};
 
 #endif
-
-	// Create our shared context
-	context = clCreateContext(
-		context_properties,
-		1,
-		&device_id,
-		nullptr, nullptr,
+	context = clCreateContextFromType(context_properties,
+		CL_DEVICE_TYPE_CPU,
+		nullptr,
+		nullptr,
 		&error
 	);
+
+	cl_device_id devices[10]{0};
+	size_t num_devices = 0;
+	clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(cl_device_id) * 10, (void*)&devices, &num_devices);
+
+	std::cout << num_devices;
+
+	//// Create our shared context
+	//context = clCreateContext(
+	//	context_properties,
+	//	1,
+	//	&device_id,
+	//	nullptr, nullptr,
+	//	&error
+	//);
 
 	if (vr_assert(error, "clCreateContext"))
 		return;
@@ -440,6 +462,26 @@ OpenCL::OpenCL(sf::Vector2i resolution) : viewport_resolution(resolution){
 
 OpenCL::~OpenCL() {
 
+}
+
+
+bool OpenCL::load_config() {
+
+	std::ifstream input_file("config.bin", std::ios::binary | std::ios::in);
+
+	if (!input_file.is_open()) {
+		std::cout << "No config file..." << std::endl;
+		return false;
+	}
+
+	saved_device prefered_device;
+	input_file.read(reinterpret_cast<char*>(&prefered_device), sizeof(prefered_device));
+
+	std::cout << "config loaded, looking for device..." << std::endl;
+
+
+	input_file.close();
+	return true;
 }
 
 bool OpenCL::init(sf::Vector4f *range)
