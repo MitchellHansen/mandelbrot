@@ -32,7 +32,7 @@ class OpenCL {
 	
 public:
 
-	OpenCL(sf::Vector2i resolution);
+	OpenCL();
 	~OpenCL();
 
 	// command queues are associated with a device and context, so for multi-gpu applications you would need
@@ -45,14 +45,27 @@ public:
 	// kernels on one or more devices specified in the context.
 	// - Contexts cannot be created using more than one platform!
 
+	bool init();
 
+	bool compile_kernel(std::string kernel_path, std::string kernel_name);
 
-	bool init(sf::Vector4f *range);
+	// Create an image buffer from an SF texture. Access Type is the read/write specifier required by OpenCL
+	bool create_image_buffer(std::string buffer_name, sf::Texture* texture, cl_int access_type);
 
-	void run_kernel(std::string kernel_name);
+	// Have CL create and manage the texture for the image buffer. Access Type is the read/write specifier required by OpenCL
+	bool create_image_buffer(std::string buffer_name, sf::Vector2i size, cl_int access_type);
+
+	// Create a buffer with CL_MEM_READ_ONLY and CL_MEM_COPY_HOST_PTR
+	int create_buffer(std::string buffer_name, cl_uint size, void* data);
+
+	// Create a buffer with user defined data access flags
+	int create_buffer(std::string buffer_name, cl_uint size, void* data, cl_mem_flags flags);
+
+	int set_kernel_arg(std::string kernel_name, int index, std::string buffer_name);
+	
+	void run_kernel(std::string kernel_name, sf::Vector2i work_size);
 
 	void draw(sf::RenderWindow *window);
-
 
 	class device {
 
@@ -72,7 +85,8 @@ public:
 		#pragma pack(pop)
 		
 		device(cl_device_id device_id, cl_platform_id platform_id);
-		void print(std::ostream& stream);
+		device(const device& d);
+		void print(std::ostream& stream) const;
 		void print_packed_data(std::ostream& stream);
 
 		cl_device_id getDeviceId() const { return device_id; };
@@ -92,21 +106,9 @@ public:
 
 private:
 
-	bool load_config();
-	void save_config();
-
-	std::vector<device> device_list;
-
-
-	std::vector<std::pair<cl_platform_id, std::vector<cl_device_id>>> platforms_and_devices;
-
 
 	int error = 0;
 
-	// Sprite and texture that is shared between CL and GL
-	sf::Sprite viewport_sprite;
-	sf::Texture viewport_texture;
-	sf::Vector2i viewport_resolution;
 
 	// The device which we have selected according to certain criteria
 	cl_platform_id platform_id;
@@ -119,42 +121,28 @@ private:
 	// Maps which contain a mapping from "name" to the host side CL memory object
 	std::unordered_map<std::string, cl_kernel> kernel_map;
 	std::unordered_map<std::string, cl_mem> buffer_map;
+	std::unordered_map<std::string, std::pair<sf::Sprite, sf::Texture>> image_map;
+	std::vector<device> device_list;
 
-	// Query the hardware on this machine and select the best device and the platform on which it resides
-	void aquire_hardware();
+	// Query the hardware on this machine and store the devices
+	bool aquire_hardware();
 
 	// After aquiring hardware, create a shared context using platform specific CL commands
-	void create_shared_context();
+	bool create_shared_context();
 
 	// Command queues must be created with a valid context
-	void create_command_queue();
-	
-	// Compile the kernel and store it in the kernel map with the name as the key
-	bool compile_kernel(std::string kernel_path, std::string kernel_name);
-
-	// Buffer operations
-	// All of these functions create and store a buffer in a map with the key representing their name
-
-	// Create an image buffer from an SF texture. Access Type is the read/write specifier required by OpenCL
-	int create_image_buffer(std::string buffer_name, cl_uint size, sf::Texture* texture, cl_int access_type);
-
-	// Create a buffer with CL_MEM_READ_ONLY and CL_MEM_COPY_HOST_PTR
-	int create_buffer(std::string buffer_name, cl_uint size, void* data);
-
-
-	// Create a buffer with user defined data access flags
-	int create_buffer(std::string buffer_name, cl_uint size, void* data, cl_mem_flags flags);
+	bool create_command_queue();
 
 
 	// Store a cl_mem object in the buffer map <string:name, cl_mem:buffer>
-	int store_buffer(cl_mem buffer, std::string buffer_name);
+	bool store_buffer(cl_mem buffer, std::string buffer_name);
 
 	// Using CL release the memory object and remove the KVP associated with the buffer name
-	int release_buffer(std::string buffer_name);
+	bool release_buffer(std::string buffer_name);
 
-	void assign_kernel_args();
-	int set_kernel_arg(std::string kernel_name, int index, std::string buffer_name);
+	bool load_config();
+	void save_config();
 
 	static bool vr_assert(int error_code, std::string function_name);
-
+	
 };

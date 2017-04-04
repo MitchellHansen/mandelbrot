@@ -1,10 +1,15 @@
 #include <OpenCL.h>
 #include "util.hpp"
 
+OpenCL::OpenCL() {
+}
 
-void OpenCL::run_kernel(std::string kernel_name) {
+OpenCL::~OpenCL() {
+}
 
-	size_t global_work_size[2] = { static_cast<size_t>(viewport_resolution.x), static_cast<size_t>(viewport_resolution.y) };
+void OpenCL::run_kernel(std::string kernel_name, sf::Vector2i work_size) {
+
+	size_t global_work_size[2] = { static_cast<size_t>(work_size.x), static_cast<size_t>(work_size.y) };
 
 	cl_kernel kernel = kernel_map.at(kernel_name);
 
@@ -32,49 +37,60 @@ void OpenCL::run_kernel(std::string kernel_name) {
 
 void OpenCL::draw(sf::RenderWindow *window) {
 
-	window->draw(viewport_sprite);
+	for (auto i: image_map) {
+		window->draw(i.second.first);
+	}
 }
 
-void OpenCL::aquire_hardware() {
+bool OpenCL::aquire_hardware()
+{
 
 	// Get the number of platforms
-	cl_uint plt_cnt = 0;
-	clGetPlatformIDs(0, nullptr, &plt_cnt);
+	cl_uint platform_count = 0;
+	clGetPlatformIDs(0, nullptr, &platform_count);
+
+	if (platform_count == 0) {
+		std::cout << "There appears to be no OpenCL platforms on this machine" << std::endl;
+		return false;
+	}
 
 	// Get the ID's for those platforms
-	std::vector<cl_platform_id> plt_buf(plt_cnt);
-	clGetPlatformIDs(plt_cnt, plt_buf.data(), nullptr);
+	std::vector<cl_platform_id> plt_buf(platform_count);
 
-	// Populate the storage vector with the platform id's
-	for (auto id : plt_buf) {
-		platforms_and_devices.push_back(std::make_pair(id, std::vector<cl_device_id>()));
-	}
+	clGetPlatformIDs(platform_count, plt_buf.data(), nullptr);
+	if (vr_assert(error, "clGetPlatformIDs"))
+		return false;
 
-	int device_position = 0;
-	for (unsigned int i = 0; i < plt_cnt; i++) {
+	// Cycle through the platform ID's
+	for (unsigned int i = 0; i < platform_count; i++) {
 
+		// And get their device count
 		cl_uint deviceIdCount = 0;
 		error = clGetDeviceIDs(plt_buf[i], CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceIdCount);
+		if (vr_assert(error, "clGetDeviceIDs"))
+			return false;
 
-		// Check to see if we even have OpenCL on this machine
 		if (deviceIdCount == 0) {
-			std::cout << "There appears to be no devices, or none at least supporting OpenCL" << std::endl;
-			return;
-		}
+			std::cout << "There appears to be no devices associated with this platform" << std::endl;
+		
+		} else {
 
-		// Get the device ids
-		std::vector<cl_device_id> deviceIds(deviceIdCount);
-		error = clGetDeviceIDs(plt_buf[i], CL_DEVICE_TYPE_ALL, deviceIdCount, deviceIds.data(), NULL);
-
-		for (int d = 0; d < deviceIds.size(); d++) {
-
-			device_list.emplace_back(device(deviceIds[d], plt_buf.at(i)));
+			// Get the device ids and place them in the device list
+			std::vector<cl_device_id> deviceIds(deviceIdCount);
 			
+			error = clGetDeviceIDs(plt_buf[i], CL_DEVICE_TYPE_ALL, deviceIdCount, deviceIds.data(), NULL);
+			if (vr_assert(error, "clGetDeviceIDs"))
+				return false;
+
+			for (int d = 0; d < deviceIds.size(); d++) {
+				device_list.emplace_back(device(deviceIds[d], plt_buf.at(i)));
+			}
 		}
 	}
+
 }
 
-void OpenCL::create_shared_context() {
+bool OpenCL::create_shared_context() {
 
 	// Hurray for standards!
 	// Setup the context properties to grab the current GL context
@@ -110,6 +126,11 @@ void OpenCL::create_shared_context() {
 		0
 	};
 
+#elif
+
+	std::cout << "Target machine not supported for cl_khr_gl_sharing" << std::endl;
+	return false;
+
 #endif
 
 	// Create our shared context
@@ -122,26 +143,29 @@ void OpenCL::create_shared_context() {
 	);
 
 	if (vr_assert(error, "clCreateContext"))
-		return;
+		return false;
+
+	return true;
 
 }
 
-void OpenCL::create_command_queue() {
+bool OpenCL::create_command_queue() {
 
-	// If context and device_id have initialized
+	// Command queue requires a context and device id. It can also be a device ID list
+	// as long as the devices reside on the same platform
 	if (context && device_id) {
 
 		command_queue = clCreateCommandQueue(context, device_id, 0, &error);
-
 		if (vr_assert(error, "clCreateCommandQueue"))
-			return;
+			return false;
+	
+	} else {
+	
+		std::cout << "Failed creating the command queue. Context or device_id not initialized" << std::endl;
+		return false;
+	}
 
-		return;
-	}
-	else {
-		std::cout << "Failed creating the command queue. Context or device_id not initialized";
-		return;
-	}
+	return true;
 }
 
 bool OpenCL::compile_kernel(std::string kernel_path, std::string kernel_name) {
@@ -200,23 +224,56 @@ bool OpenCL::compile_kernel(std::string kernel_path, std::string kernel_name) {
 	return true;
 }
 
-int OpenCL::create_image_buffer(std::string buffer_name, cl_uint size, sf::Texture* texture, cl_int access_type) {
+bool OpenCL::create_image_buffer(std::string buffer_name, sf::Texture* texture, cl_int access_type) {
 	
 	if (buffer_map.count(buffer_name) > 0) {
 		release_buffer(buffer_name);
+
+		// Need to check to see if we are taking care of the texture as well
+		if (image_map.count(buffer_name) > 0)
+			image_map.erase(buffer_name);
 	}
 
-	int error;
 	cl_mem buff = clCreateFromGLTexture(
 		context, access_type, GL_TEXTURE_2D,
 		0, texture->getNativeHandle(), &error);
 
 	if (vr_assert(error, "clCreateFromGLTexture"))
-		return 1;
+		return false;
 
 	store_buffer(buff, buffer_name);
 
-	return 1;
+	return true;
+}
+
+
+bool OpenCL::create_image_buffer(std::string buffer_name, sf::Vector2i size, cl_int access_type) {
+	
+	if (buffer_map.count(buffer_name) > 0) {
+		release_buffer(buffer_name);
+
+		// Need to check to see if we are taking care of the texture as well
+		if (image_map.count(buffer_name) > 0)
+			image_map.erase(buffer_name);
+	}
+
+	sf::Texture texture;
+	texture.create(size.x, size.y);
+
+	sf::Sprite sprite(texture);
+
+	image_map[buffer_name] = std::make_pair(sprite, texture);
+
+	cl_mem buff = clCreateFromGLTexture(
+		context, access_type, GL_TEXTURE_2D,
+		0, texture.getNativeHandle(), &error);
+
+	if (vr_assert(error, "clCreateFromGLTexture"))
+		return false;
+
+	store_buffer(buff, buffer_name);
+
+	return true;
 }
 
 int OpenCL::create_buffer(std::string buffer_name, cl_uint size, void* data) {
@@ -258,45 +315,47 @@ int OpenCL::create_buffer(std::string buffer_name, cl_uint size, void* data, cl_
 
 }
 
-int OpenCL::store_buffer(cl_mem buffer, std::string buffer_name) {
+bool OpenCL::store_buffer(cl_mem buffer, std::string buffer_name) {
 	
-	if (buffer_map.count(buffer_name)) {
-		clReleaseMemObject(buffer_map[buffer_name]);
+	if (buffer_map.count(buffer_name) > 0) {
+
+		error = clReleaseMemObject(buffer_map.at(buffer_name));
+
+		if (vr_assert(error, "clReleaseMemObject")) {
+			std::cout << "Error releasing overlapping buffer : " << buffer_name;
+			std::cout << "Buffer not added";
+			return false;
+		}
 	}
 	
 	buffer_map[buffer_name] = buffer;
 
-	return 1;
+	return true;
 }
 
-int OpenCL::release_buffer(std::string buffer_name) {
+bool OpenCL::release_buffer(std::string buffer_name) {
 
 	if (buffer_map.count(buffer_name) > 0) {
 
-		int error = clReleaseMemObject(buffer_map.at(buffer_name));
+		error = clReleaseMemObject(buffer_map.at(buffer_name));
 
 		if (vr_assert(error, "clReleaseMemObject")) {
 			std::cout << "Error releasing buffer : " << buffer_name;
 			std::cout << "Buffer not removed";
-			return -1;
+			return false;
 
 		}
-		else {
-			buffer_map.erase(buffer_name);
-		}
+		
+		buffer_map.erase(buffer_name);
+		
+	} else {
 
-	}
-	else {
 		std::cout << "Error releasing buffer : " << buffer_name;
 		std::cout << "Buffer not found";
-		return -1;
+		return false;
 	}
 
-	return 1;
-}
-
-void OpenCL::assign_kernel_args() {
-
+	return true;
 }
 
 int OpenCL::set_kernel_arg(std::string kernel_name, int index, std::string buffer_name) {
@@ -314,19 +373,6 @@ int OpenCL::set_kernel_arg(std::string kernel_name, int index, std::string buffe
 	}
 	return 1;
 }
-
-OpenCL::OpenCL(sf::Vector2i resolution) : viewport_resolution(resolution){
-
-	viewport_texture.create(viewport_resolution.x, viewport_resolution.y);
-	viewport_sprite.setTexture(viewport_texture);
-
-
-}
-
-OpenCL::~OpenCL() {
-
-}
-
 
 bool OpenCL::load_config() {
 
@@ -368,11 +414,10 @@ void OpenCL::save_config() {
 	output_file.close();
 }
 
-bool OpenCL::init(sf::Vector4f *range)
-{
+bool OpenCL::init() {
 	
-	// Initialize opencl up to the point where we start assigning buffers
-	aquire_hardware();
+	if (!aquire_hardware())
+		return false;
 
 	if (!load_config()) {
 
@@ -399,25 +444,14 @@ bool OpenCL::init(sf::Vector4f *range)
 		platform_id = device_list.at(selection).getPlatformId();
 
 		save_config();
-
 	}
 
-	create_shared_context();
+	if (!create_shared_context())
+		return false;
 	
-	create_command_queue();
+	if (!create_command_queue())
+		return false;
 
-	while (!compile_kernel("../kernels/mandlebrot.cl", "mandlebrot")) {
-		std::cin.get();
-	}
-	
-	create_image_buffer("viewport_image", viewport_texture.getSize().x * viewport_texture.getSize().x * 4 * sizeof(float), &viewport_texture, CL_MEM_WRITE_ONLY);
-	create_buffer("image_res", sizeof(sf::Vector2i), &viewport_resolution);
-	create_buffer("range", sizeof(sf::Vector4f), range, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR);
-
-
-	set_kernel_arg("mandlebrot", 0, "image_res");
-	set_kernel_arg("mandlebrot", 1, "viewport_image");
-	set_kernel_arg("mandlebrot", 2, "range");
 
 	return true;
 }
@@ -648,7 +682,20 @@ OpenCL::device::device(cl_device_id device_id, cl_platform_id platform_id) {
 }
 
 
-void OpenCL::device::print(std::ostream& stream) {
+OpenCL::device::device(const device& d) {
+
+	// member values, copy individually
+	device_id = d.device_id;
+	platform_id = d.platform_id;
+	is_little_endian = d.is_little_endian;
+	cl_gl_sharing = d.cl_gl_sharing;
+
+	// struct so it copies by value
+	data = d.data;
+
+}
+
+void OpenCL::device::print(std::ostream& stream) const {
 		
 	stream << "\n\tDevice ID        : " << device_id << std::endl;
 	stream << "\tDevice Name      : " << data.device_name << std::endl;
