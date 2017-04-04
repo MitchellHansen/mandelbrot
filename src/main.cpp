@@ -38,20 +38,17 @@ int main() {
 	OpenCL cl;
 
 	sf::Vector4f range(-1.0f, 1.0f, -1.0f, 1.0f);
-	sf::Vector2i window_dimensions(WINDOW_X, WINDOW_Y);
+	sf::Vector2i image_resolution(WINDOW_X, WINDOW_Y);
 
-	cl.init();
+	if (!cl.init())
+		return -1;
 	
 	while (!cl.compile_kernel("../kernels/mandlebrot.cl", "mandlebrot")) {
 		std::cin.get();
 	}
 
-	sf::Texture t;
-	t.create(WINDOW_X, WINDOW_Y);
-	sf::Sprite window_sprite(t);
-
-	cl.create_image_buffer("viewport_image", &t, CL_MEM_WRITE_ONLY);
-	cl.create_buffer("image_res", sizeof(sf::Vector2i), &window_dimensions);
+	cl.create_image_buffer("viewport_image", image_resolution, CL_MEM_WRITE_ONLY);
+	cl.create_buffer("image_res", sizeof(sf::Vector2i), &image_resolution);
 	cl.create_buffer("range", sizeof(sf::Vector4f), (void*)&range, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR);
 	
 	cl.set_kernel_arg("mandlebrot", 0, "image_res");
@@ -67,32 +64,32 @@ int main() {
 			}
 			if (event.type == sf::Event::KeyPressed) {
 				if (event.key.code == sf::Keyboard::Down) {
-					range.z += 0.001;
-					range.w += 0.001;
+					range.z += 0.001f;
+					range.w += 0.001f;
 				}
 				if (event.key.code == sf::Keyboard::Up) {
-					range.z -= 0.001;
-					range.w -= 0.001;
+					range.z -= 0.001f;
+					range.w -= 0.001f;
 				}
 				if (event.key.code == sf::Keyboard::Right) {
-					range.x += 0.001;
-					range.y += 0.001;
+					range.x += 0.001f;
+					range.y += 0.001f;
 				}
 				if (event.key.code == sf::Keyboard::Left) {
-					range.x -= 0.001;
-					range.y -= 0.001;
+					range.x -= 0.001f;
+					range.y -= 0.001f;
 				}
 				if (event.key.code == sf::Keyboard::Equal) {
-					range.x *= 1.02;
-					range.y *= 1.02;
-					range.z *= 1.02;
-					range.w *= 1.02;
+					range.x *= 1.02f;
+					range.y *= 1.02f;
+					range.z *= 1.02f;
+					range.w *= 1.02f;
 				}
 				if (event.key.code == sf::Keyboard::Dash) {
-					range.x *= 0.98;
-					range.y *= 0.98;
-					range.z *= 0.98;
-					range.w *= 0.98;
+					range.x *= 0.98f;
+					range.y *= 0.98f;
+					range.z *= 0.98f;
+					range.w *= 0.98f;
 				}
 			}
 		}
@@ -111,9 +108,8 @@ int main() {
 
 		window.clear(sf::Color::White);
 	
-		cl.run_kernel("mandlebrot", window_dimensions);
+		cl.run_kernel("mandlebrot", image_resolution);
 		cl.draw(&window);
-		window.draw(window_sprite);
 
 		window.display();
 

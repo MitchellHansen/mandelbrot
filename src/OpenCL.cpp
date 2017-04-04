@@ -1,6 +1,7 @@
 #include <OpenCL.h>
 #include "util.hpp"
 
+
 OpenCL::OpenCL() {
 }
 
@@ -36,8 +37,8 @@ void OpenCL::run_kernel(std::string kernel_name, sf::Vector2i work_size) {
 }
 
 void OpenCL::draw(sf::RenderWindow *window) {
-
-	for (auto i: image_map) {
+	
+	for (auto &&i: image_map) {
 		window->draw(i.second.first);
 	}
 }
@@ -88,6 +89,7 @@ bool OpenCL::aquire_hardware()
 		}
 	}
 
+	return true;
 }
 
 bool OpenCL::create_shared_context() {
@@ -257,20 +259,20 @@ bool OpenCL::create_image_buffer(std::string buffer_name, sf::Vector2i size, cl_
 			image_map.erase(buffer_name);
 	}
 
-	sf::Texture texture;
-	texture.create(size.x, size.y);
-
-	sf::Sprite sprite(texture);
-
-	image_map[buffer_name] = std::make_pair(sprite, texture);
+	std::unique_ptr<sf::Texture> texture(new sf::Texture);
+	texture->create(size.x, size.y);
 
 	cl_mem buff = clCreateFromGLTexture(
 		context, access_type, GL_TEXTURE_2D,
-		0, texture.getNativeHandle(), &error);
+		0, texture->getNativeHandle(), &error);
 
 	if (vr_assert(error, "clCreateFromGLTexture"))
 		return false;
 
+	sf::Sprite sprite(*texture);
+
+	image_map[buffer_name] = std::pair<sf::Sprite, std::unique_ptr<sf::Texture>>(sf::Sprite(*texture), std::move(texture));
+	
 	store_buffer(buff, buffer_name);
 
 	return true;

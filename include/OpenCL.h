@@ -6,6 +6,7 @@
 #include <iostream>
 #include "Vector4.hpp"
 #include <string.h>
+#include <memory>
 
 #ifdef linux
 #include <CL/cl.h>
@@ -121,7 +122,7 @@ private:
 	// Maps which contain a mapping from "name" to the host side CL memory object
 	std::unordered_map<std::string, cl_kernel> kernel_map;
 	std::unordered_map<std::string, cl_mem> buffer_map;
-	std::unordered_map<std::string, std::pair<sf::Sprite, sf::Texture>> image_map;
+	std::unordered_map<std::string, std::pair<sf::Sprite, std::unique_ptr<sf::Texture>>> image_map;
 	std::vector<device> device_list;
 
 	// Query the hardware on this machine and store the devices

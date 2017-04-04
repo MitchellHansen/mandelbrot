@@ -16,88 +16,6 @@
 const double PI = 3.141592653589793238463;
 const float  PI_F = 3.14159265358979f;
 
-struct fps_counter {
-public:
-	fps_counter() : 
-		backdrop(sf::Vector2f(200, 100)), vertex_array(sf::LinesStrip) {
-		
-		backdrop.setFillColor(sf::Color(0x0000003F));
-
-		if(!f.loadFromFile("../assets/fonts/Arial.ttf")){
-				std::cout << "couldn't find the fall back Arial font in ../assets/fonts/" << std::endl;
-		} else {
-			t.setFont(f);
-			t.setCharacterSize(18);
-			t.setColor(sf::Color::White);
-		}
-	}
-
-	void frame(double delta_time){
-    // Apply 100 units of smoothing
-		if (frame_count == 100){
-			frame_count = 0;
-			fps_average = 0;
-		}
-			frame_count++;
-			fps_average += (delta_time - fps_average) / frame_count;
-	}
-
-	void flip_units() {
-		if (milliseconds)
-			milliseconds = false;
-		else
-			milliseconds = true;
-	}
-
-	void draw(sf::RenderWindow *r){
-		
-		r->draw(backdrop);
-		
-		if (vertex_position == 200)
-			vertex_position = 0;
-
-		sf::Vector2f origin = backdrop.getPosition();
-		sf::Vector2f point = origin + sf::Vector2f(vertex_position, backdrop.getSize().y - (1.0/fps_average));
-
-		if (vertex_array.getVertexCount() < 200)
-			vertex_array.append(sf::Vertex(point, sf::Color::Red));
-		else
-			vertex_array[vertex_position] = sf::Vertex(point, sf::Color::Red);
-
-		r->draw(vertex_array);
-
-		vertex_position++;
-
-		std::string out;
-
-		if (milliseconds)
-			out = std::to_string(fps_average);
-		else
-			out = std::to_string(floor(1 / fps_average));
-
-		t.setString(out);
-
-
-
-		r->draw(t);
-	}
-
-private:
-
-	sf::RectangleShape backdrop;
-	sf::VertexArray vertex_array;
-	
-	sf::Font f;
-	sf::Text t;
-
-	int frame_count = 0;
-	double fps_average = 0;
-	bool milliseconds = false;
-
-	int vertex_position = 0;
-};
-
-
 inline sf::Vector3f SphereToCart(sf::Vector2f i) {
 
 	auto r = sf::Vector3f(
@@ -224,25 +142,18 @@ inline void DumpLog(std::stringstream* ss, std::string file_name) {
 
 }
 
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  define __builtin_popcount _mm_popcnt_u32
+#  define __builtin_popcountll _mm_popcnt_u64
+#endif
+
 inline int count_bits(int32_t v) {
 
-	v = v - ((v >> 1) & 0x55555555);                       // reuse input as temporary
-	v = (v & 0x33333333) + ((v >> 2) & 0x33333333);        // temp
-	return (((v + (v >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24; // count
+	return static_cast<int>(__builtin_popcount(v));
 }
 
 inline int count_bits(int64_t v) {
 
-	int32_t left = (int32_t)(v);
-	int32_t right = (int32_t)(v >> 32);
-
-	left = left - ((left >> 1) & 0x55555555);                    // reuse input as temporary
-	left = (left & 0x33333333) + ((left >> 2) & 0x33333333);     // temp
-	left = ((left + (left >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
-
-	right = right - ((right >> 1) & 0x55555555);                    // reuse input as temporary
-	right = (right & 0x33333333) + ((right >> 2) & 0x33333333);     // temp
-	right = ((right + (right >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
-
-	return left + right;
+	return static_cast<int>(__builtin_popcountll(v));
 }
