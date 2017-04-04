@@ -51,10 +51,10 @@ public:
 	bool compile_kernel(std::string kernel_path, std::string kernel_name);
 
 	// Create an image buffer from an SF texture. Access Type is the read/write specifier required by OpenCL
-	bool create_image_buffer(std::string buffer_name, sf::Texture* texture, cl_int access_type);
+	bool create_image_buffer_from_texture(std::string buffer_name, sf::Texture* texture, cl_int access_type);
 
 	// Have CL create and manage the texture for the image buffer. Access Type is the read/write specifier required by OpenCL
-	bool create_image_buffer(std::string buffer_name, sf::Vector2i size, cl_int access_type);
+	bool create_image_buffer(std::string buffer_name, sf::Vector2i size, sf::Vector2f position, cl_int access_type);
 
 	// Create a buffer with CL_MEM_READ_ONLY and CL_MEM_COPY_HOST_PTR
 	int create_buffer(std::string buffer_name, cl_uint size, void* data);

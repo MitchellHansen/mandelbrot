@@ -226,7 +226,7 @@ bool OpenCL::compile_kernel(std::string kernel_path, std::string kernel_name) {
 	return true;
 }
 
-bool OpenCL::create_image_buffer(std::string buffer_name, sf::Texture* texture, cl_int access_type) {
+bool OpenCL::create_image_buffer_from_texture(std::string buffer_name, sf::Texture* texture, cl_int access_type) {
 	
 	if (buffer_map.count(buffer_name) > 0) {
 		release_buffer(buffer_name);
@@ -249,7 +249,7 @@ bool OpenCL::create_image_buffer(std::string buffer_name, sf::Texture* texture, 
 }
 
 
-bool OpenCL::create_image_buffer(std::string buffer_name, sf::Vector2i size, cl_int access_type) {
+bool OpenCL::create_image_buffer(std::string buffer_name, sf::Vector2i size, sf::Vector2f position, cl_int access_type) {
 	
 	if (buffer_map.count(buffer_name) > 0) {
 		release_buffer(buffer_name);
@@ -270,8 +270,9 @@ bool OpenCL::create_image_buffer(std::string buffer_name, sf::Vector2i size, cl_
 		return false;
 
 	sf::Sprite sprite(*texture);
+	sprite.setPosition(position);
 
-	image_map[buffer_name] = std::pair<sf::Sprite, std::unique_ptr<sf::Texture>>(sf::Sprite(*texture), std::move(texture));
+	image_map[buffer_name] = std::pair<sf::Sprite, std::unique_ptr<sf::Texture>>(sprite, std::move(texture));
 	
 	store_buffer(buff, buffer_name);
 
